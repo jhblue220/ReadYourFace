@@ -2,7 +2,7 @@
 
 /* ── Config ── */
 const API_KEY  = 'AIzaSyCdawUowHGKF2MskQrrTUsU73kVAJ5CdCQ';
-const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
+const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
 /* ── State ── */
 let faces          = [];   // { id, imageData, analysis, x, y, vx, vy, size, isDragging, element }
@@ -147,7 +147,11 @@ async function analyzeWithGemini(dataUrl) {
         { text: prompt },
       ],
     }],
-    generationConfig: { temperature: 0.9, maxOutputTokens: 400 },
+    generationConfig: {
+      temperature: 0.9,
+      maxOutputTokens: 400,
+      responseMimeType: 'application/json',
+    },
   };
 
   const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -158,11 +162,18 @@ async function analyzeWithGemini(dataUrl) {
     throw new Error(`Gemini error ${code}`);
   }
 
-  const data = await res.json();
-  const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  const m    = raw.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('Unexpected response format');
-  return JSON.parse(m[0]);
+  const data  = await res.json();
+  console.log('[Gemini face]', JSON.stringify(data).slice(0, 600));
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const text  = parts.find(p => !p.thought)?.text ?? parts[0]?.text ?? '';
+  let parsed  = null;
+  try { parsed = JSON.parse(text); } catch {}
+  if (!parsed) {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) try { parsed = JSON.parse(m[0]); } catch {}
+  }
+  if (!parsed) throw new Error('Unexpected response format');
+  return parsed;
 }
 
 /* ════════════════════════════════
@@ -191,8 +202,9 @@ async function analyzeMatchWithGemini(type, f1, f2) {
   const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`Gemini error ${res.status}`);
 
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '분석 실패.';
+  const data  = await res.json();
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  return parts.find(p => !p.thought)?.text?.trim() ?? parts[0]?.text?.trim() ?? '분석 실패.';
 }
 
 /* ════════════════════════════════
