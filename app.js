@@ -2,7 +2,7 @@
 
 /* ── Config ── */
 const API_KEY  = 'AIzaSyCdawUowHGKF2MskQrrTUsU73kVAJ5CdCQ';
-const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${API_KEY}`;
 
 /* ── State ── */
 let faces          = [];   // { id, imageData, analysis, x, y, vx, vy, size, isDragging, element }
@@ -85,7 +85,11 @@ async function captureAndAnalyze() {
     addFaceToCanvas(dataUrl, analysis);
   } catch (err) {
     console.error(err);
-    alert('분석 실패. 다시 시도하라.');
+    if (err.message === 'RATE_LIMIT') {
+      alert('API 호출 한도 초과. 1분 후 다시 시도하라.');
+    } else {
+      alert('분석 실패. 다시 시도하라.');
+    }
   } finally {
     hideLoading();
   }
@@ -147,7 +151,12 @@ async function analyzeWithGemini(dataUrl) {
   };
 
   const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  if (!res.ok) {
+    const code = res.status;
+    if (code === 429) throw new Error('RATE_LIMIT');
+    if (code === 400) throw new Error('BAD_REQUEST');
+    throw new Error(`Gemini error ${code}`);
+  }
 
   const data = await res.json();
   const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
