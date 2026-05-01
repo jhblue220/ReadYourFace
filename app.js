@@ -1,7 +1,7 @@
 'use strict';
 
 /* ── Config ── */
-const API_KEY  = 'AIzaSyCdawUowHGKF2MskQrrTUsU73kVAJ5CdCQ';
+const API_KEY  = 'AIzaSyDkD-7QAEt5xPLJJ9beoUxmlS5Na86hcKg';
 const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
 /* ── State ── */
@@ -193,11 +193,21 @@ async function analyzeMatchWithGemini(type, f1, f2) {
 장점: ${f2.analysis.pros}
 단점: ${f2.analysis.cons}
 
-이 두 사람의 ${label} 궁합을 냉정하게 3문장 이내로 판단하라. 미화 금지. 잘 맞으면 이유를, 최악이면 왜 최악인지 말해라.`;
+이 두 사람의 ${label} 궁합을 냉정하게 분석하라. 미화 금지.
+반드시 아래 JSON 형식으로만 응답하라:
+{
+  "score": 0~100 사이의 정수 (궁합 점수),
+  "text": "3문장 이내의 냉정한 궁합 분석"
+}`;
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.9, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
+    generationConfig: {
+      temperature: 0.9,
+      maxOutputTokens: 1024,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   };
 
   const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -205,7 +215,14 @@ async function analyzeMatchWithGemini(type, f1, f2) {
 
   const data  = await res.json();
   const parts = data.candidates?.[0]?.content?.parts ?? [];
-  return parts.find(p => !p.thought)?.text?.trim() ?? parts[0]?.text?.trim() ?? '분석 실패.';
+  const raw   = parts.find(p => !p.thought)?.text ?? parts[0]?.text ?? '';
+  let parsed  = null;
+  try { parsed = JSON.parse(raw); } catch {}
+  if (!parsed) {
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (m) try { parsed = JSON.parse(m[0]); } catch {}
+  }
+  return parsed ?? { score: 50, text: '분석 실패.' };
 }
 
 /* ════════════════════════════════
@@ -380,8 +397,8 @@ async function handleMatchType(type) {
   showLoading();
 
   try {
-    const text = await analyzeMatchWithGemini(type, face1, face2);
-    renderMatchResult(type, face1, face2, text);
+    const result = await analyzeMatchWithGemini(type, face1, face2);
+    renderMatchResult(type, face1, face2, result);
   } catch {
     alert('궁합 분석 실패. 다시 시도하라.');
   } finally {
@@ -389,11 +406,12 @@ async function handleMatchType(type) {
   }
 }
 
-function renderMatchResult(type, f1, f2, text) {
+function renderMatchResult(type, f1, f2, result) {
   const label = { friend: '친구 궁합', team: '팀 궁합', lover: '연인 궁합' }[type];
+  const score = Math.min(100, Math.max(0, result.score ?? 50));
 
   document.querySelector('.result-type-label').textContent = label;
-  document.querySelector('.result-body').textContent       = text;
+  document.querySelector('.result-body').textContent       = result.text ?? '분석 실패.';
 
   document.querySelector('.result-faces').innerHTML = `
     <div class="result-face-mini">
@@ -406,6 +424,12 @@ function renderMatchResult(type, f1, f2, text) {
       <span>${f2.analysis.keyword}</span>
     </div>
   `;
+
+  const scoreEl = document.querySelector('.result-score');
+  scoreEl.textContent = score + '%';
+  /* colour: cold blue → warm red based on score */
+  const hue = Math.round(score * 1.2); // 0→0(red-ish) … 100→120(green-ish) — inverted below
+  scoreEl.style.color = `hsl(${200 + score * 0.6}, 80%, 72%)`;
 
   matchResult.classList.remove('hidden');
 }
