@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>READ YOUR FACE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Floating face canvas -->
+    <div id="face-canvas"></div>
+
+    <!-- Header -->
+    <div id="header">
+      <span class="site-title">READ YOUR FACE</span>
+      <span class="site-sub">관상은 과학이다</span>
+    </div>
+
+    <!-- Initial state: no faces yet -->
+    <div id="start-section">
+      <p class="start-label">당신의 관상을 분석한다</p>
+      <button id="start-btn">
+        <span class="btn-label">촬 영<br>시 작</span>
+      </button>
+      <p class="start-hint">카메라로 얼굴을 등록하면 AI가 냉정하게 판단한다</p>
+    </div>
+
+    <!-- Drag hint (shown when 2+ faces exist) -->
+    <p id="drag-hint" class="hidden">얼굴을 드래그해 다른 얼굴에 겹치면 궁합을 본다</p>
+
+    <!-- Add more button -->
+    <button id="add-btn" class="hidden" title="얼굴 추가">+</button>
+
+    <!-- ── Webcam modal ── -->
+    <div id="webcam-modal" class="hidden">
+      <div class="viewfinder-wrap">
+        <div class="vf-outer-ring"></div>
+        <div class="vf-inner">
+          <video id="webcam-video" autoplay playsinline muted></video>
+          <div class="vf-crosshair"></div>
+        </div>
+      </div>
+      <p class="cam-hint">정면을 응시하라</p>
+      <button id="capture-btn"></button>
+      <button id="close-webcam">✕</button>
+    </div>
+
+    <!-- ── Loading overlay ── -->
+    <div id="loading-overlay" class="hidden">
+      <div class="loading-ring"></div>
+      <p class="loading-text">관상 분석 중</p>
+    </div>
+
+    <!-- ── Match popup ── -->
+    <div id="match-popup" class="hidden">
+      <div class="popup-glass">
+        <p class="popup-label">궁합 유형을 선택하라</p>
+        <div class="match-row">
+          <button class="match-btn" data-type="friend">친구</button>
+          <button class="match-btn" data-type="team">팀</button>
+          <button class="match-btn" data-type="lover">연인</button>
+        </div>
+        <button id="cancel-match">취소</button>
+      </div>
+    </div>
+
+    <!-- ── Match result ── -->
+    <div id="match-result" class="hidden">
+      <div class="result-glass">
+        <div class="result-faces"></div>
+        <p class="result-type-label"></p>
+        <p class="result-body"></p>
+        <button id="close-result">닫기</button>
+      </div>
+    </div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
