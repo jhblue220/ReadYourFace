@@ -151,6 +151,7 @@ async function analyzeWithGemini(dataUrl) {
       temperature: 0.9,
       maxOutputTokens: 1024,
       responseMimeType: 'application/json',
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -196,7 +197,7 @@ async function analyzeMatchWithGemini(type, f1, f2) {
 
   const body = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.9, maxOutputTokens: 1024 },
+    generationConfig: { temperature: 0.9, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
   };
 
   const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
