@@ -1,8 +1,14 @@
 'use strict';
 
 /* ── Config ── */
-const API_KEY  = 'AIzaSyDkD-7QAEt5xPLJJ9beoUxmlS5Na86hcKg';
-const GEMINI   = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_BASE  = 'https://generativelanguage.googleapis.com/v1beta/models';
+function geminiUrl() {
+  return `${GEMINI_BASE}/${GEMINI_MODEL}:generateContent?key=${getApiKey()}`;
+}
+function getApiKey() {
+  return localStorage.getItem('ryf_api_key') ?? '';
+}
 
 /* ── State ── */
 let faces          = [];   // { id, imageData, analysis, x, y, vx, vy, size, isDragging, element }
@@ -32,6 +38,16 @@ const matchResult   = document.getElementById('match-result');
    Init
 ════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  /* API key gate */
+  if (!getApiKey()) {
+    document.getElementById('key-section').classList.remove('hidden');
+    startSection.classList.add('hidden');
+  }
+  document.getElementById('key-submit-btn').addEventListener('click', submitApiKey);
+  document.getElementById('api-key-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitApiKey();
+  });
+
   document.getElementById('start-btn').addEventListener('click', openWebcam);
   addBtn.addEventListener('click', openWebcam);
   document.getElementById('capture-btn').addEventListener('click', captureAndAnalyze);
@@ -51,6 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   startAnimation();
 });
+
+/* ════════════════════════════════
+   API Key
+════════════════════════════════ */
+function submitApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val) return;
+  localStorage.setItem('ryf_api_key', val);
+  document.getElementById('key-section').classList.add('hidden');
+  startSection.classList.remove('hidden');
+}
 
 /* ════════════════════════════════
    Webcam
@@ -155,7 +182,7 @@ async function analyzeWithGemini(dataUrl) {
     },
   };
 
-  const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(geminiUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) {
     const code = res.status;
     if (code === 429) throw new Error('RATE_LIMIT');
@@ -210,7 +237,7 @@ async function analyzeMatchWithGemini(type, f1, f2) {
     },
   };
 
-  const res = await fetch(GEMINI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const res = await fetch(geminiUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`Gemini error ${res.status}`);
 
   const data  = await res.json();
